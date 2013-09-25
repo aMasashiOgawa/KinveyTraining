@@ -16,3 +16,6 @@ gen/
 local.properties
 
 .DS_Store
+
+# Kinvey app key and app credential
+status-share/assets/kinvey.properties
