@@ -13,6 +13,8 @@
  */
 package com.kinvey.samples.statusshare.fragments;
 
+import android.app.Activity;
+import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -31,6 +33,10 @@ import com.kinvey.java.User;
 import com.kinvey.samples.statusshare.R;
 import com.kinvey.samples.statusshare.StatusShare;
 
+import com.facebook.Session;
+import com.facebook.SessionState;
+import com.facebook.Session.StatusCallback;
+
 /** Allow user to login.
  *
  *
@@ -42,6 +48,7 @@ public class LoginFragment extends KinveyFragment implements View.OnClickListene
     private EditText username;
     private EditText password;
     private Button login;
+    private Button loginFacebook;
     private TextView usernameLabel;
     private TextView passwordLabel;
 
@@ -78,11 +85,13 @@ public class LoginFragment extends KinveyFragment implements View.OnClickListene
         passwordLabel = (TextView) v.findViewById(R.id.login_label_password);
 
         login = (Button) v.findViewById(R.id.login);
+        loginFacebook = (Button)v.findViewById(R.id.login_facebook);
 
         login.setTypeface(getRoboto());
         usernameLabel.setTypeface(getRoboto());
         passwordLabel.setTypeface(getRoboto());
         login.setOnClickListener(this);
+        loginFacebook.setOnClickListener(this);
     }
 
 
@@ -91,31 +100,86 @@ public class LoginFragment extends KinveyFragment implements View.OnClickListene
 
     @Override
     public void onClick(View v) {
-        if (v == login){
-            getClient().user().login(username.getText().toString(), password.getText().toString(), new KinveyUserCallback() {
-                @Override
-                public void onSuccess(User result) {
-                    if (getSherlockActivity() == null){
-                        return;
+        if (v.equals(login)) {
+            if (v == login){
+                getClient().user().login(username.getText().toString(), password.getText().toString(), new KinveyUserCallback() {
+                    @Override
+                    public void onSuccess(User result) {
+                        if (getSherlockActivity() == null){
+                            return;
+                        }
+                        CharSequence text = "Logged in " + result.get("username") + ".";
+                        Toast.makeText(getSherlockActivity().getApplicationContext(), text, Toast.LENGTH_LONG).show();
+                        loggedIn();
                     }
-                    CharSequence text = "Logged in " + result.get("username") + ".";
-                    Toast.makeText(getSherlockActivity().getApplicationContext(), text, Toast.LENGTH_LONG).show();
-                    loggedIn();
-                }
+    
+                    public void onFailure(Throwable t) {
+                        if (getSherlockActivity() == null){
+                            return;
+                        }
+                        CharSequence text = "Wrong username or password";
+                        Toast toast = Toast.makeText(getSherlockActivity().getApplicationContext(), text, Toast.LENGTH_LONG);
+                        toast.setGravity(Gravity.CENTER_VERTICAL, 0, 0);
+                        toast.show();
+                    }
+                });
+            }
+        } else if (v.equals(loginFacebook)) {
+            onLoginFacebookButtonClicked();
+        }
+    }
 
-                public void onFailure(Throwable t) {
-                    if (getSherlockActivity() == null){
-                        return;
+    protected void onLoginFacebookButtonClicked() {
+        Log.v("LoginFragment", "onLoginFacebookButtonClicked");
+        doFacebookSso(null);
+    }
+
+    private void doFacebookSso(final ProgressDialog progressDialog) {
+        try {
+            Session.openActiveSession(getActivity(), true, new Session.StatusCallback() {
+                @Override
+                public void call(Session session, SessionState state, Exception exception) {
+                    if (exception == null) {
+                        if (state.equals(Activity.RESULT_CANCELED)) {
+                               Toast.makeText(getActivity(), "FB login cancelled",
+                                       Toast.LENGTH_LONG).show();
+                        } else if (state.isOpened()) {
+                               if (progressDialog != null && progressDialog.isShowing()) {
+                                   progressDialog.dismiss();
+                               }
+                              Toast.makeText(getActivity(), "Logged in with Facebook.",
+                                       Toast.LENGTH_LONG).show();
+                               loginFacebookKinveyUser(progressDialog, session.getAccessToken());
+                          }
+                    } else {
+                        Log.v("LoginFragment", "error: ", exception);
                     }
-                    CharSequence text = "Wrong username or password";
-                    Toast toast = Toast.makeText(getSherlockActivity().getApplicationContext(), text, Toast.LENGTH_LONG);
-                    toast.setGravity(Gravity.CENTER_VERTICAL, 0, 0);
-                    toast.show();
                 }
             });
-
-
+        } catch (Exception ex) {
+               Log.i("LoginFragment", ex.getMessage());
         }
+    }
+    /*
+     * Login a Kinvey User with Faceook credentials
+     */
+    private void loginFacebookKinveyUser(final ProgressDialog progressDialog, String accessToken) {
+        getClient().user().loginFacebook(accessToken, new KinveyUserCallback() {
+            @Override
+            public void onFailure(Throwable e) {
+                CharSequence text = "Wrong username or password";
+                Toast toast = Toast.makeText(getActivity(), text, Toast.LENGTH_LONG);
+                toast.setGravity(Gravity.CENTER_VERTICAL, 0, 0);
+                toast.show();
+            }
+            @Override
+            public void onSuccess(User u) {
+                progressDialog.dismiss();
+                CharSequence text = "Logged in.";
+                Toast.makeText(getActivity(), text, Toast.LENGTH_LONG).show();
+                loggedIn();
+            }
+        });
     }
 
     protected void addEditListeners() {
