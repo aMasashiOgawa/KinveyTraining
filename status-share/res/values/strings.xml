@@ -40,4 +40,5 @@
     <string name="description_send">Send Status</string>
     <string name="hint_update">Type message</string>
 
+    <string name="facebook_appid">323709404310474</string>
 </resources>

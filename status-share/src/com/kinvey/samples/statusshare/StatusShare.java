@@ -18,13 +18,15 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.app.FragmentTransaction;
-import android.os.Bundle;
 import android.util.Log;
+
 import com.actionbarsherlock.app.SherlockFragment;
 import com.actionbarsherlock.app.SherlockFragmentActivity;
+import com.facebook.Session;
 import com.google.api.client.http.HttpTransport;
 import com.kinvey.android.Client;
 import com.kinvey.samples.statusshare.fragments.LoginFragment;
@@ -150,6 +152,8 @@ public class StatusShare extends SherlockFragmentActivity {
             Log.i(Client.TAG, "activity result, bitmap from camera is -> " + String.valueOf(bitmap == null));
             Log.i(Client.TAG, "activity result, path from camera is -> " + String.valueOf(path == null));
 
+        } else if (requestCode == Session.DEFAULT_AUTHORIZE_ACTIVITY_CODE) {
+            Session.getActiveSession().onActivityResult(this, requestCode, resultCode, data);
         } else {
             Log.e(TAG, "That's not a valid request code! -> " + requestCode);
         }
